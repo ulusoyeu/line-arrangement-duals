@@ -2,13 +2,6 @@ import numpy as np
 import sympy as sp
 import itertools
 import matplotlib.pyplot as plt
-import random
-
-# NUMERICAL STABILITY OF MATRIX RANK / SOLUTIONS
-# FIND BOUNDING BOX
-
-
-
 
 # A point in R^2
 class Point:
@@ -55,7 +48,49 @@ class Line:
     def desmos_format(self) -> str:
         desmos = f'f(x) = ({self.linear_format[0]}) / (-1 * {self.linear_format[1]}) * x + ({self.linear_format[2]}) / (-1 * {self.linear_format[1]})'
         return desmos
+
+class LineSegment:
+
+    def __init__(self, p1 : Point, p2 : Point) -> None:
+        self.p1 = p1
+        self.p2 = p2
+        # Returns an array [a, b, c] that represents the line in format ax + by + c = 0
+        self.linear_format = self.compute_linear_format()
+        self.desmos = self.desmos_format()
+        self.infinite_line = Line(p1, p2)
+    
+    def compute_linear_format(self) -> float:
+        equation_matrix = sp.Matrix( np.array([[self.p1.x, self.p1.y, 1], 
+                                     [self.p2.x, self.p2.y, 1]]) )
+        nullspace = equation_matrix.nullspace()
+
+        # Convert all elements to Rational
+        rationals = [sp.Rational(elem) for elem in nullspace[0]]
+
+        # Find the LCM of all denominators
+        denominators = [r.q for r in rationals]
+        lcm_value = sp.lcm(denominators)
+
+        # Scale each element
+        solution = [int(coord * lcm_value) for coord in nullspace[0]]
+
+        return solution
+    
+    def desmos_format(self) -> str:
+        desmos = f'f(x) = ({self.linear_format[0]}) / (-1 * {self.linear_format[1]}) * x + ({self.linear_format[2]}) / (-1 * {self.linear_format[1]})'
+        return desmos
+    
+    # Given a point (x, y), checks if the point is in the bounding box given by the line segment
+    def in_bounding_box(self, point) -> bool:
         
+        min_x, max_x = min(self.p1.x, self.p2.x), max(self.p1.x, self.p2.x)
+        min_y, max_y = min(self.p1.y, self.p2.y), max(self.p1.y, self.p2.y)
+
+        if min_x <= point[0] <= max_x and min_y <= point[1] <= max_y:
+            return True
+        else:
+            return False
+
 # Given a set of distinct points, implements the configuration given by taking every possible lines
 class PointConfiguration:
 
@@ -85,7 +120,6 @@ class RegularPolygon:
     # Returns a list of lines
     def all_pairs_lines(self):
         pass
-
 
 # Implements the line arrangement structure and algorithms
 class LineArrangement:
@@ -130,10 +164,11 @@ class LineArrangement:
             return False
 
     # Returns the intersection point of two lines if it exists
-    def line_intersection(self, line1 : Line, line2 : Line):
+    def find_line_intersection(self, line1 : Line, line2 : Line):
         
         if not self.intersects(line1, line2):
             print("The lines do NOT intersect!")
+            return None
         
         arrl1 = line1.linear_format
         arrl2 = line2.linear_format
@@ -148,6 +183,16 @@ class LineArrangement:
 
         return np.linalg.solve(M, B)
     
+    #
+    def line_lineSegment_intersects(self, line : Line, lineSegment : LineSegment) -> bool:
+
+        if not self.intersects(line, lineSegment.infinite_line):
+            return False
+        
+        intersection = self.find_line_intersection(line, lineSegment.infinite_line)
+
+        return lineSegment.in_bounding_box(intersection)
+    
     
     def intersection_points(self) -> set:
 
@@ -160,7 +205,7 @@ class LineArrangement:
             if not self.intersects(line_pair[0], line_pair[1]):
                 continue
             else:
-                intersection_points.add(tuple(self.line_intersection(line_pair[0], line_pair[1])))
+                intersection_points.add(tuple(self.find_line_intersection(line_pair[0], line_pair[1])))
 
         print(f'Number of Intersection Points: {len(intersection_points)}')
 
@@ -224,22 +269,18 @@ class LineArrangement:
 
 # IMPORTANT - How to ensure no issues occur in arrangements where the line perfectly crosses through the vertices - do not want numerical errors!
 
+# points = [Point(0,1), Point(1,0), Point(-1,0), Point(0,-1), Point(0.6, 0.8)]
+# PC = PointConfiguration(points)
+# print(PC.line_arrangement.intersection_points())
+# print(PC.line_arrangement.find_bounding_box())
+# PC.line_arrangement.visualise()
 
-points = [Point(0,1), Point(1,0), Point(-1,0), Point(0,-1), Point(0.6, 0.8)]
-PC = PointConfiguration(points)
-print(PC.line_arrangement.intersection_points())
-print(PC.line_arrangement.find_bounding_box())
-PC.line_arrangement.visualise()
+hexagon = [Point(1,1), Point(1,-1), Point(-1, -1), Point(-1,1), Point(0.5,2), Point(-0.5,2), Point(0.5,-2), Point(-0.5,-2)]
+hexagon_arrangement = PointConfiguration(hexagon)
+hexagon_arrangement.line_arrangement.visualise()
 
-# points2 = [Point(0,1), Point(0.6, 0.8), Point(-1,0), Point(0,-1)]
-# PC2 = PointConfiguration(points2)
-# 
-# print(PC2.line_arrangement.intersection_points())
-# PC2.line_arrangement.visualise()
-# 
-# line1 = Line(Point(0.6, 0.8), Point(0,1))
-# line2 = Line(Point(-1,0), Point(0,-1))
-# 
 # LA = LineArrangement([])
+# line = Line(Point(0,0), Point(1,1))
+# lineSegment = LineSegment(Point(1,-1), Point(2,-2))
 # 
-# print(LA.line_intersection(line1, line2))
+# print(LA.line_lineSegment_intersects(line, lineSegment))
