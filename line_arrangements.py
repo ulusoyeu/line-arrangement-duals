@@ -203,8 +203,23 @@ class LineArrangement:
         for line in self.lines:
             plt.axline((line.p1.x, line.p1.y), (line.p2.x, line.p2.y))
 
-        plt.xlim(-5,5)
-        plt.ylim(-5,5)
+        bounding_box = self.find_bounding_box()
+
+        corners = [(bounding_box[0] - 1, bounding_box[1] - 1),  # Bottom Left
+                    (bounding_box[0] - 1, bounding_box[3] + 1), # Top Left
+                   (bounding_box[2] + 1, bounding_box[1] - 1),  # Bottom Right
+                   (bounding_box[2] + 1, bounding_box[3] + 1)]  # Top Right
+        
+        print(corners)
+        
+        plt.plot( (corners[0][0], corners[1][0]), (corners[0][1], corners[1][1]), linestyle='solid', color='black')
+        plt.plot( (corners[0][0], corners[2][0]), (corners[0][1], corners[2][1]), linestyle='solid', color='black')
+        plt.plot( (corners[1][0], corners[3][0]), (corners[1][1], corners[3][1]), linestyle='solid', color='black')
+        plt.plot( (corners[3][0], corners[2][0]), (corners[3][1], corners[2][1]), linestyle='solid', color='black')
+
+        plt.xlim(bounding_box[0] - 2, bounding_box[2] + 2)
+        plt.ylim(bounding_box[1] - 2, bounding_box[3] + 2)
+
         plt.show()
 
 # IMPORTANT - How to ensure no issues occur in arrangements where the line perfectly crosses through the vertices - do not want numerical errors!
