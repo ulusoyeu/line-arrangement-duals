@@ -2,6 +2,7 @@ import numpy as np
 import sympy as sp
 import itertools
 import matplotlib.pyplot as plt
+from dcel import Vertex, HalfEdge, Face
 
 # A point in R^2
 class Point:
@@ -94,7 +95,7 @@ class LineSegment:
 # Given a set of distinct points, implements the configuration given by taking every possible lines
 class PointConfiguration:
 
-    # Initialized by a list of Point objects
+    # Initialised by a list of Point objects
     def __init__(self, points) -> None:
         self.points = points
         self.lines = self.all_pairs_lines()
@@ -129,7 +130,7 @@ class LineArrangement:
         self.vertices = None
         self.half_edges = None
         self.faces = None
-        self.bounding_box = None
+        self.bounding_box = self.find_bounding_box()
 
     def division_factor(self, number):
 
@@ -219,11 +220,9 @@ class LineArrangement:
         if not points:
             return None  # Return None for an empty set of points
 
-        # Initialize min and max values with the first point
+        # Initialise min and max values with the first point
         min_x, min_y = points[0]
         max_x, max_y = points[0]
-
-        print(min_x)
 
         # Iterate through the rest of the points
         for x, y in points[1:]:
@@ -239,16 +238,99 @@ class LineArrangement:
     def update_bounding_box(self, line : Line):
         pass
 
-    # Creates the 
+    # Initialised the DCEL structure on the bounding box
+    def dcel_initialise(self):
+        
+        # Initialisation of the DCEL
+        vertices = []
+        half_edges = []
+        faces = []
+
+        # Initialise the vertices, faces and half edges with the bounding box
+        bounding_box = self.bounding_box
+
+        # v1 = Vertex(bounding_box[0] - 1, bounding_box[1] - 1)  # Bottom Left
+        # v2 = Vertex(bounding_box[0] - 1, bounding_box[3] + 1) # Top Left
+        # v3 = Vertex(bounding_box[2] + 1, bounding_box[1] - 1)  # Bottom Right
+        # v4 = Vertex(bounding_box[2] + 1, bounding_box[3] + 1)  # Top Right
+
+        v1 = [bounding_box[0] - 1, bounding_box[3] + 1] # Top Left    
+        v2 = [bounding_box[0] - 1, bounding_box[1] - 1]  # Bottom Left
+        v3 = [bounding_box[2] + 1, bounding_box[1] - 1]  # Bottom Right
+        v4 = [bounding_box[2] + 1, bounding_box[3] + 1]  # Top Right
+
+        vertices_ccw = []
+
+        vertices_ccw.append(v1)
+        vertices_ccw.append(v2)
+        vertices_ccw.append(v3)
+        vertices_ccw.append(v4)
+
+        # Create vertices
+        for x, y in vertices_ccw:
+            vertices.append(Vertex(x, y))
+
+        # Create half-edges
+        for _ in range(8):  # 8 half-edges for a box (4 edges, each with 2 half-edges)
+            half_edges.append(HalfEdge())
+
+        # Create faces (exterior and interior)
+        faces.append(Face())  # Exterior face
+        faces.append(Face())  # Interior face
+
+        # Connect half-edges - in the initialisation, even indexed edges are interior of the box - odd indexed edges are the exterior of the box
+        for i in range(4):
+            # Set origin for each half-edge
+            half_edges[i*2].origin = vertices[i]
+            half_edges[i*2+1].origin = vertices[(i+1)%4]
+
+            # Set twin half-edges
+            half_edges[i*2].twin = half_edges[i*2+1]
+            half_edges[i*2+1].twin = half_edges[i*2]
+
+            # Set next and prev for counter-clockwise traversal
+            half_edges[i*2].next = half_edges[(i*2+2)%8]
+            half_edges[i*2].prev = half_edges[(i*2-2)%8]
+
+            # Set next and prev for clockwise traversal
+            half_edges[i*2+1].next = half_edges[(i*2-1)%8]
+            half_edges[i*2+1].prev = half_edges[(i*2+3)%8]
+
+            # Set incident face
+            half_edges[i*2].incident_face = faces[1]  # Interior face
+            half_edges[i*2+1].incident_face = faces[0]  # Exterior face
+
+            # Set incident edge for vertices
+            vertices[i].incident_edge = half_edges[i*2]
+
+        # faces[0] is the exterior of the box
+        # faces[1] is the interior of the box
+        # Set outer component for faces
+        faces[0].outer_component = half_edges[1]  # Any exterior half-edge
+        faces[1].outer_component = half_edges[0]  # Any interior half-edge
+
+        # Update the object properties
+        self.vertices = vertices
+        self.half_edges = half_edges
+        self.faces = faces
+
+        return None
+
+
     def dcel(self):
-        pass
+
+        # Initialise the DCEL on the bounding box
+        # Interior face of the box: faces[1]
+        # Exterior face of the box: faces[0]
+        self.dcel_initialise()
+
 
     def visualise(self) -> None:
 
         for line in self.lines:
             plt.axline((line.p1.x, line.p1.y), (line.p2.x, line.p2.y))
 
-        bounding_box = self.find_bounding_box()
+        bounding_box = self.bounding_box
 
         corners = [(bounding_box[0] - 1, bounding_box[1] - 1),  # Bottom Left
                     (bounding_box[0] - 1, bounding_box[3] + 1), # Top Left
@@ -277,7 +359,23 @@ class LineArrangement:
 
 hexagon = [Point(1,1), Point(1,-1), Point(-1, -1), Point(-1,1), Point(0.5,2), Point(-0.5,2), Point(0.5,-2), Point(-0.5,-2)]
 hexagon_arrangement = PointConfiguration(hexagon)
-hexagon_arrangement.line_arrangement.visualise()
+LA = hexagon_arrangement.line_arrangement
+
+LA.dcel()
+
+print(len(LA.vertices))
+print(len(LA.half_edges))
+print(len(LA.faces))
+
+print("-----")
+
+for hedge in LA.half_edges:
+    print([hedge.origin.x_coord, hedge.origin.y_coord])
+    print([hedge.next.origin.x_coord, hedge.next.origin.y_coord])
+    print("------------")
+
+LA.visualise()
+
 
 # LA = LineArrangement([])
 # line = Line(Point(0,0), Point(1,1))
