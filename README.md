@@ -8,7 +8,7 @@ This repository will include C++ / Python code to implement and analyse the dual
 # Configuration
 
 Initially, it started as a project to implement the line arrangement algorithm specified in [1], yet then realized that the CGAL implementation is more robust and efficient although it is annoying to set up.
-As a future reference, below are some important notes on configuring the CGAL library.
+The most accurate way to set up is to exactly follow the specifications in https://doc.cgal.org/latest/Manual/windows.html, however there are some parts that are unclear. As a future reference, below are some important notes on configuring the CGAL library.
 
 1) In the project folder, create the CMakeLists.txt file using the built in .\CGAL-5.6.1\scripts\cgal_create_CMakeLists file.
 2) Once the file exists, create a subdiretory named \build using "mkdir build" command.
